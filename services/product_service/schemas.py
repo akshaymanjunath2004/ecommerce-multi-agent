@@ -13,3 +13,6 @@ class ProductResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class StockUpdate(BaseModel):
+    quantity: int

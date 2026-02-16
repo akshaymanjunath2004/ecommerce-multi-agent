@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Happy Path - Buy Available Item",
+    "inputs": "Find a MacBook Pro and buy 1 unit.",
+    "expected_behavior": "The agent should find the MacBook Pro, add it to cart, and successfully place an order. It must return an Order ID.",
+    "strict_match": false
+  },
+  {
+    "name": "Sad Path - Out of Stock / Non-existent",
+    "inputs": "Buy a Quantum Computer.",
+    "expected_behavior": "The agent should search for the product, fail to find it, and politely inform the user that it is unavailable. It MUST NOT try to buy it.",
+    "strict_match": false
+  },
+  {
+    "name": "Complex Path - Multi-Item Math",
+    "inputs": "Buy 2 Yonex Arcsaber 11 Pro rackets.",
+    "expected_behavior": "The agent should identify the price is $200. It should buy 2 units. The total transaction amount must be $400. It must return a Transaction ID.",
+    "strict_match": false
+  }
+]

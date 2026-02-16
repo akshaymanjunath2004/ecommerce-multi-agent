@@ -1,6 +1,7 @@
 version: "3.9"
 
 services:
+  # --- Infrastructure ---
   postgres:
     image: postgres:15
     container_name: ecommerce_postgres
@@ -9,9 +10,92 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ecommerce
     ports:
-      - "5433:5432"
+      - "5433:5432" # Host 5433 -> Container 5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- Microservices ---
+  
+  # 1. Orchestrator (Port 8000)
+  orchestrator:
+    build: .
+    container_name: orchestrator
+    command: uvicorn services.orchestrator.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY} # Reads from your .env file
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      # Service Discovery URLs (Internal Docker Network)
+      - PRODUCT_URL=http://product_service:8000
+      - ORDER_URL=http://order_service:8000
+      - PAYMENT_URL=http://payment_service:8000
+      - SESSION_URL=http://session_service:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # 2. Product Service (Port 8001)
+  product_service:
+    build: .
+    container_name: product_service
+    command: uvicorn services.product_service.main:product_app --host 0.0.0.0 --port 8000
+    ports:
+      - "8001:8000" # Map Host 8001 to Internal 8000
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # 3. Order Service (Port 8002)
+  order_service:
+    build: .
+    container_name: order_service
+    command: uvicorn services.order_service.main:order_app --host 0.0.0.0 --port 8000
+    ports:
+      - "8002:8000"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # 4. Payment Service (Port 8003)
+  payment_service:
+    build: .
+    container_name: payment_service
+    command: uvicorn services.payment_service.main:payment_app --host 0.0.0.0 --port 8000
+    ports:
+      - "8003:8000"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # 5. Session Service (Port 8004)
+  session_service:
+    build: .
+    container_name: session_service
+    command: uvicorn services.session_service.main:session_app --host 0.0.0.0 --port 8000
+    ports:
+      - "8004:8000"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:

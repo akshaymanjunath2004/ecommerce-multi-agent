@@ -12,7 +12,7 @@ from services.product_service.main import product_app
 from services.order_service.main import order_app
 from services.payment_service.main import payment_app
 from services.session_service.main import session_app
-from orchestrator.main import orchestrator_app
+from services.orchestrator.main import app as orchestrator_app
 
 app = FastAPI(title="Ecommerce Cluster")
 

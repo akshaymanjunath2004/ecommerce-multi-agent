@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from .router import router
 
-orchestrator_app = FastAPI(
+# RENAME THIS from 'orchestrator_app' to 'app'
+app = FastAPI(
     title="Orchestrator Service",
     version="1.0.0"
 )
 
-orchestrator_app.include_router(router)
+app.include_router(router)
