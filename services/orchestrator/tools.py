@@ -53,49 +53,68 @@ class ECommerceTools:
             results = []
             with httpx.Client() as client:
                 # 1. Get Cart
-                cart = client.get(f"{SESSION_URL}/{session_id}").json()
+                cart_resp = client.get(f"{SESSION_URL}/{session_id}")
+                if cart_resp.status_code != 200:
+                    return "Cart is empty."
+
+                cart = cart_resp.json()
                 if not cart.get("items"):
                     return "Cart is empty."
 
-                # 2. Loop through items
                 for item in cart["items"]:
                     pid = item["product_id"]
                     qty = item["quantity"]
-                    
-                    # A. Get Price
+
+                    # Fetch product (STRICT)
                     product_resp = client.get(f"{PRODUCT_URL}/{pid}")
                     if product_resp.status_code != 200:
-                         results.append(f"Error: Product {pid} not found. Skipping.")
-                         continue
+                        return f"Error: Product with ID {pid} does not exist."
+
                     product = product_resp.json()
                     real_price = product["price"]
 
-                    # B. Reduce Stock
+                    # Reduce stock
                     stock_payload = {"quantity": qty}
-                    stock_resp = client.post(f"{PRODUCT_URL}/{pid}/reduce_stock", json=stock_payload)
+                    stock_resp = client.post(
+                        f"{PRODUCT_URL}/{pid}/reduce_stock",
+                        json=stock_payload
+                    )
+
                     if stock_resp.status_code != 200:
-                        results.append(f"Error: Could not reduce stock for Product {pid}. Skipping.")
-                        continue 
-                    
-                    # C. Create Order
+                        return f"Error: Could not reduce stock for Product {pid}."
+
+                    # Create order
                     order_payload = {
                         "product_id": pid,
                         "quantity": qty,
                         "unit_price": real_price
                     }
-                    order = client.post(f"{ORDER_URL}/", json=order_payload).json()
+
+                    order_resp = client.post(f"{ORDER_URL}/", json=order_payload)
+                    order_resp.raise_for_status()
+                    order = order_resp.json()
+
                     order_id = order["id"]
-                    
-                    # D. Pay
-                    pay_payload = {"order_id": order_id, "amount": order["total_price"]}
-                    payment = client.post(f"{PAYMENT_URL}/", json=pay_payload).json()
-                    tx_id = payment.get("transaction_id", "Unknown")
-                    
+
+                    # Process payment
+                    pay_payload = {
+                        "order_id": order_id,
+                        "amount": order["total_price"]
+                    }
+
+                    payment_resp = client.post(f"{PAYMENT_URL}/", json=pay_payload)
+                    payment_resp.raise_for_status()
+                    payment = payment_resp.json()
+
+                    tx_id = payment.get("transaction_id")
+
                     total_price = order["total_price"]
-                    
-                    # FIXED: Removed the backslash that caused the SyntaxWarning
-                    results.append(f"Success! Order ID: {order_id} | Transaction ID: {tx_id} | Total Paid: ${total_price}")
-                
+
+                    results.append(
+                        f"Success! Order ID: {order_id} | Transaction ID: {tx_id} | Total Paid: ${total_price}"
+                    )
+
                 return "\n".join(results)
+
         except Exception as e:
             return f"Checkout failed: {e}"

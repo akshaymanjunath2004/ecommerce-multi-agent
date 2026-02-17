@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from services.product_service.repository import ProductRepository
 from shared.config.database import get_db
 from .schemas import ProductCreate, ProductResponse, StockUpdate
 from .service import ProductService
@@ -21,20 +22,40 @@ async def create_product(
 
 @router.get("/", response_model=list[ProductResponse])
 async def list_products(
+    query: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db)
 ):
-    return await ProductService.list_products(db)
+    products = await ProductService.list_products(db)
 
-@router.post("/{product_id}/reduce_stock", response_model=ProductResponse)
-async def reduce_stock(
-    product_id: int,
-    update: StockUpdate,
-    db: AsyncSession = Depends(get_db)
-):
-    try:
-        return await ProductService.reduce_stock(db, product_id, update.quantity)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    if query:
+        query_words = set(query.lower().split())
+        filtered = []
+
+        for p in products:
+            name_words = set(p.name.lower().split())
+            if query_words & name_words:
+                filtered.append(p)
+
+        products = filtered
+
+    return products
+
+@staticmethod
+async def reduce_stock(db: AsyncSession, product_id: int, quantity: int):
+    if quantity <= 0:
+        raise ValueError("Quantity must be greater than zero.")
+
+    product = await ProductRepository.get_product_by_id(db, product_id)
+
+    if not product:
+        raise ValueError("Product not found.")
+
+    if product.stock < quantity:
+        raise ValueError("Insufficient stock.")
+
+    product.stock -= quantity
+    return await ProductRepository.update_product(db, product)
+
     
 @router.post("/reset_db")
 async def reset_db(db: AsyncSession = Depends(get_db)):

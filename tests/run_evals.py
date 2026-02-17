@@ -44,13 +44,13 @@ async def setup_environment():
             pass # Ignore if endpoint doesn't exist
             
         # 2. Restock MacBook (Store the response to check ID if needed)
-        resp_mb = await client.post(f"{PRODUCT_URL}/", json={"name": "MacBook Pro", "price": 2000.0, "stock": 10})
+        resp_mb = await client.post(f"{PRODUCT_URL}/", json={"name": "MacBook Pro", "price": 2000.0, "stock": 5})
         
         # 3. Restock Racket
         resp_rk = await client.post(f"{PRODUCT_URL}/", json={"name": "Yonex Arcsaber 11 Pro", "price": 200.0, "stock": 10})
         
         print("   Checking Stock:", resp_mb.json()['id'], resp_rk.json()['id'])
-        
+
 async def run_test_case(test_case):
     name = test_case["name"]
     user_input = test_case["inputs"]

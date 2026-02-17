@@ -2,19 +2,73 @@
   {
     "name": "Happy Path - Buy Available Item",
     "inputs": "Find a MacBook Pro and buy 1 unit.",
-    "expected_behavior": "The agent should find the MacBook Pro, add it to cart, and successfully place an order. It must return an Order ID.",
+    "expected_behavior": "The agent must find the MacBook Pro and successfully return an Order ID.",
     "strict_match": false
   },
   {
-    "name": "Sad Path - Out of Stock / Non-existent",
+    "name": "Sad Path - Non-existent Product",
     "inputs": "Buy a Quantum Computer.",
-    "expected_behavior": "The agent should search for the product, fail to find it, and politely inform the user that it is unavailable. It MUST NOT try to buy it.",
+    "expected_behavior": "The agent must search and clearly inform the user that the product is unavailable. It must NOT create an order.",
     "strict_match": false
   },
   {
-    "name": "Complex Path - Multi-Item Math",
+    "name": "Multi Quantity Math Validation",
     "inputs": "Buy 2 Yonex Arcsaber 11 Pro rackets.",
-    "expected_behavior": "The agent should identify the price is $200. It should buy 2 units. The total transaction amount must be $400. It must return a Transaction ID.",
+    "expected_behavior": "The total must equal 400 dollars and a transaction ID must be returned.",
+    "strict_match": false
+  },
+  {
+    "name": "Case Insensitivity",
+    "inputs": "buy 1 macbook pro",
+    "expected_behavior": "The agent must successfully purchase regardless of case.",
+    "strict_match": false
+  },
+  {
+    "name": "Plural Handling",
+    "inputs": "Buy 1 Yonex racket",
+    "expected_behavior": "The agent must match the product even with partial name.",
+    "strict_match": false
+  },
+  {
+    "name": "Excess Stock Request",
+    "inputs": "Buy 100 MacBook Pro units.",
+    "expected_behavior": "The agent must detect insufficient stock and refuse the purchase.",
+    "strict_match": false
+  },
+  {
+    "name": "Zero Quantity Edge Case",
+    "inputs": "Buy 0 MacBook Pro.",
+    "expected_behavior": "The agent must reject zero quantity purchases.",
+    "strict_match": false
+  },
+  {
+    "name": "Negative Quantity Edge Case",
+    "inputs": "Buy -5 MacBook Pro.",
+    "expected_behavior": "The agent must reject invalid negative quantity.",
+    "strict_match": false
+  },
+  {
+    "name": "Cart Without Search",
+    "inputs": "Checkout now.",
+    "expected_behavior": "If cart is empty, agent must say cart is empty.",
+    "strict_match": false
+  },
+  {
+    "name": "Sequential Purchase Same Session",
+    "inputs": "Buy 1 MacBook Pro. Then buy 1 Yonex Arcsaber 11 Pro.",
+    "expected_behavior": "Both purchases must be processed correctly.",
+    "strict_match": false
+  },
+  {
+    "name": "Synonym Variation",
+    "inputs": "Purchase a MacBook Pro.",
+    "expected_behavior": "Agent must treat purchase as buy.",
+    "strict_match": false
+  },
+  {
+    "name": "Search Only",
+    "inputs": "Show me available products.",
+    "expected_behavior": "Agent must list products and not attempt checkout.",
     "strict_match": false
   }
 ]

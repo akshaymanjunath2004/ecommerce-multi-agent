@@ -13,6 +13,9 @@ class OrderService:
             total_price=total,
             status="pending"
         )
+        if data.quantity<=0:
+            raise ValueError("Invalid Quantity.")
+        
         return await OrderRepository.create_order(db, order)
 
     @staticmethod
