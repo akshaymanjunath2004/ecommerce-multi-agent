@@ -40,21 +40,17 @@ async def list_products(
 
     return products
 
-@staticmethod
-async def reduce_stock(db: AsyncSession, product_id: int, quantity: int):
-    if quantity <= 0:
-        raise ValueError("Quantity must be greater than zero.")
-
-    product = await ProductRepository.get_product_by_id(db, product_id)
-
-    if not product:
-        raise ValueError("Product not found.")
-
-    if product.stock < quantity:
-        raise ValueError("Insufficient stock.")
-
-    product.stock -= quantity
-    return await ProductRepository.update_product(db, product)
+# FIX: Added proper route decorator and used Pydantic model for body
+@router.post("/{product_id}/reduce_stock")
+async def reduce_stock(
+    product_id: int,
+    stock_update: StockUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        return await ProductService.reduce_stock(db, product_id, stock_update.quantity)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     
 @router.post("/reset_db")

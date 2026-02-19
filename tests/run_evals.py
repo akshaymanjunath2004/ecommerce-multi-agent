@@ -10,7 +10,6 @@ AGENT_URL = "http://localhost:8000/chat"
 PRODUCT_URL = "http://localhost:8001"
 SESSION_URL = "http://localhost:8004"
 
-# 1. The Judge (LLM)
 judge_llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
 JUDGE_PROMPT = ChatPromptTemplate.from_template("""
@@ -36,20 +35,26 @@ Example: PASS | The agent successfully returned an order ID.
 async def setup_environment():
     print(colored("⚙️  Resetting Environment...", "cyan"))
     async with httpx.AsyncClient() as client:
-        # 1. Clear Products (Assuming you added the /reset_db endpoint)
-        # If you didn't, we can just rely on creating new ones and trusting the agent to find them.
         try:
             await client.post(f"{PRODUCT_URL}/reset_db")
         except:
-            pass # Ignore if endpoint doesn't exist
+            pass 
             
-        # 2. Restock MacBook (Store the response to check ID if needed)
-        resp_mb = await client.post(f"{PRODUCT_URL}/", json={"name": "MacBook Pro", "price": 2000.0, "stock": 5})
+        # 1. Base Inventory
+        await client.post(f"{PRODUCT_URL}/", json={"name": "MacBook Pro", "price": 2000.0, "stock": 10})
+        await client.post(f"{PRODUCT_URL}/", json={"name": "Yonex Arcsaber 11 Pro", "price": 200.0, "stock": 10})
         
-        # 3. Restock Racket
-        resp_rk = await client.post(f"{PRODUCT_URL}/", json={"name": "Yonex Arcsaber 11 Pro", "price": 200.0, "stock": 10})
+        # 2. Tie-Breaker Items ($5.00)
+        await client.post(f"{PRODUCT_URL}/", json={"name": "Tennis Ball", "price": 5.0, "stock": 50})
+        await client.post(f"{PRODUCT_URL}/", json={"name": "Ping Pong Ball", "price": 5.0, "stock": 50})
         
-        print("   Checking Stock:", resp_mb.json()['id'], resp_rk.json()['id'])
+        # 3. NEW: Absolute Cheapest Item ($2.00)
+        await client.post(f"{PRODUCT_URL}/", json={"name": "Rubber Keychain", "price": 2.0, "stock": 100})
+        
+        # Mid-range
+        await client.post(f"{PRODUCT_URL}/", json={"name": "Water Bottle", "price": 10.0, "stock": 20})
+        
+        print("   ✅ Environment Restocked with 6 products.")
 
 async def run_test_case(test_case):
     name = test_case["name"]
@@ -59,11 +64,9 @@ async def run_test_case(test_case):
     print(f"\n🧪 Testing: {colored(name, 'yellow')}")
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        # 1. Create a fresh session for this test
         session_resp = await client.post(f"{SESSION_URL}/", json={"user_id": 1})
         session_id = session_resp.json()["session_id"]
 
-        # 2. Call the Agent
         try:
             print(f"   User: {user_input}")
             response = await client.post(
@@ -77,7 +80,6 @@ async def run_test_case(test_case):
             agent_reply = f"SYSTEM ERROR: {str(e)}"
             print(colored(f"   API Fail: {e}", "red"))
 
-        # 3. Call the LLM Judge
         print("   👨‍⚖️  Judging...", end="", flush=True)
         judge_resp = await judge_llm.ainvoke(JUDGE_PROMPT.format(
             input=user_input,
@@ -85,7 +87,6 @@ async def run_test_case(test_case):
             actual_response=agent_reply
         ))
         
-        # 4. Parse Verdict
         verdict = judge_resp.content
         status, reason = verdict.split("|", 1) if "|" in verdict else (verdict, "No reason provided")
         
@@ -95,7 +96,6 @@ async def run_test_case(test_case):
             print(f"\r   ❌ {colored('FAIL', 'red')} | {reason.strip()}")
 
 async def main():
-    # Load dataset
     with open("tests/dataset.json", "r") as f:
         dataset = json.load(f)
 

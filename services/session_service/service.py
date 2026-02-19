@@ -27,5 +27,14 @@ class SessionService:
             quantity=item_data.quantity
         )
         await SessionRepository.add_item(db, item)
-        # Return the updated session
         return await SessionRepository.get_session(db, session_id)
+
+    @staticmethod
+    async def remove_item_from_session(db: AsyncSession, session_id: str, product_id: int):
+        await SessionRepository.remove_item(db, session_id, product_id)
+        return await SessionRepository.get_session(db, session_id)
+
+    # --- NEW METHOD ---
+    @staticmethod
+    async def clear_session_cart(db: AsyncSession, session_id: str):
+        await SessionRepository.clear_cart(db, session_id)
