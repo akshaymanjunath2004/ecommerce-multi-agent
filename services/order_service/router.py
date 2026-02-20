@@ -25,7 +25,6 @@ async def get_order(order_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Order not found")
     return order
 
-# THIS IS REQUIRED FOR THE SAGA ROLLBACK
 @router.patch("/{order_id}/cancel")
 async def cancel_order(order_id: int, db: AsyncSession = Depends(get_db)):
     order = await OrderService.cancel_order(db, order_id)

@@ -41,10 +41,9 @@ class SessionRepository:
         await db.execute(stmt)
         await db.commit()
 
-    # --- CRITICAL FIX ---
     @staticmethod
     async def clear_cart(db: AsyncSession, session_id: str):
         """Deletes all items for the session and forces a commit."""
         stmt = delete(SessionItem).where(SessionItem.session_id == session_id)
         await db.execute(stmt)
-        await db.commit() # Ensure this commit is awaited!
+        await db.commit() 

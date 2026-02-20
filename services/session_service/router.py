@@ -1,5 +1,5 @@
 """
-FIX GAP #4: ALL endpoints now require the X-Internal-API-Key header.
+ALL endpoints now require the X-Internal-API-Key header.
 Previously every endpoint was completely unprotected — any external caller
 could create sessions, add items, or clear carts without authentication.
 
@@ -15,7 +15,6 @@ from shared.security.dependencies import verify_internal_api_key
 from .schemas import SessionCreate, SessionItemCreate, SessionResponse
 from .service import SessionService
 
-# FIX GAP #4: Single dependency on the router protects ALL routes at once
 router = APIRouter(dependencies=[Depends(verify_internal_api_key)])
 public_router = APIRouter()  # For any public endpoints (e.g. health check)
 

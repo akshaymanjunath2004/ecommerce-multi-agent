@@ -2,7 +2,6 @@ import os
 from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 
-# In production, these should be loaded securely from a vault or env
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError("FATAL ERROR: JWT_SECRET_KEY is not set in the environment!")

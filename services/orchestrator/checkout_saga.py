@@ -72,7 +72,7 @@ async def rollback_payment(ctx: dict):
     tx_id = ctx.get("transaction_id")
     if tx_id:
         logger.info(f"Logging Refund Intent for Transaction: {tx_id}")
-        # In a real app, hit Stripe/Razorpay refund webhook here
+        # In a real app, hit Stripe/Razorpay refund webhook here (just simulating a gateway call)
 
 
 # --- BUILDER FACTORY ---

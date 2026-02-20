@@ -1,5 +1,5 @@
 """
-FIX GAP #10: Router now passes db: AsyncSession to service methods (async).
+Router now passes db: AsyncSession to service methods (async).
 Previously called sync methods; now properly async end-to-end.
 """
 from fastapi import APIRouter, Depends, status

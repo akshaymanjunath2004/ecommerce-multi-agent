@@ -1,5 +1,4 @@
-"""
-FIX GAP #6: The env var for the OTLP exporter was 'OTLP_ENDPOINT' but
+"""Observability setup for FastAPI services.
 docker-compose sets 'OTEL_EXPORTER_OTLP_ENDPOINT'. This mismatch meant
 Jaeger received ZERO traces from any service. Now reads the correct var,
 with 'http://jaeger:4317' as the Docker-network default.
@@ -45,8 +44,6 @@ def configure_logging():
 
 
 def configure_tracing(app: FastAPI, service_name: str):
-    # FIX GAP #6: Read OTEL_EXPORTER_OTLP_ENDPOINT (standard OTel env var name)
-    # Previously read OTLP_ENDPOINT which is non-standard and never set by docker-compose
     otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://jaeger:4317")
 
     resource = Resource.create({SERVICE_NAME: service_name})

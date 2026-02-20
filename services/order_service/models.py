@@ -3,7 +3,7 @@ from shared.config.database import Base
 
 class Order(Base):
     __tablename__ = "orders"
-    # We use a separate schema to simulate microservice isolation
+    # use a separate schema to simulate microservice isolation
     __table_args__ = {"schema": "order_schema"}
 
     id = Column(Integer, primary_key=True, index=True)

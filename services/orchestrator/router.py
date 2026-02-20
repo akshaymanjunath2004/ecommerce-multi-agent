@@ -14,15 +14,11 @@ async def health_check():
 @router.post("/chat", response_model=ChatResponse)
 @limiter.limit("10/minute")  # Rate limit: 10 requests per minute per user/IP
 async def chat_endpoint(
-    request: Request,                          # REQUIRED: slowapi needs this to check IP/Headers
-    payload: ChatRequest,                      # Your JSON body (renamed from 'request')
-    user_id: str = Depends(get_current_user)   # REQUIRED: This locks the endpoint with JWT!
+    request: Request,                         
+    payload: ChatRequest,                      
+    user_id: str = Depends(get_current_user)   
 ):
     try:
-        # The endpoint is now secure! 
-        # You now have the 'user_id' string available. In a future update, 
-        # you can pass this to ChatService to enforce that users can only access their own sessions.
-        
         response_text = await chat_service.process_message(
             session_id=payload.session_id,
             message=payload.message

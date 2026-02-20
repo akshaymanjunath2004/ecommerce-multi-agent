@@ -7,15 +7,15 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from shared.config.database import Base, engine
-from shared.observability.setup import setup_observability  # FIX GAP #7
+from shared.observability.setup import setup_observability 
 
-from .models import Payment  # noqa: F401
+from .models import Payment 
 from .router import router, public_router
 
 
 payment_app = FastAPI(title="Payment Service", version="2.0.0")
 
-# FIX GAP #7: Now emits structured logs, OTLP traces to Jaeger, and /metrics
+# Now emits structured logs, OTLP traces to Jaeger, and /metrics
 setup_observability(payment_app, "payment_service")
 
 payment_app.include_router(router)

@@ -42,7 +42,7 @@ async def list_products(
 
     return products
 
-# FIX: Added proper route decorator and used Pydantic model for body
+# Added proper route decorator and used Pydantic model for body
 @router.post("/{product_id}/reduce_stock")
 async def reduce_stock(
     product_id: int,

@@ -34,7 +34,6 @@ class SessionService:
         await SessionRepository.remove_item(db, session_id, product_id)
         return await SessionRepository.get_session(db, session_id)
 
-    # --- NEW METHOD ---
     @staticmethod
     async def clear_session_cart(db: AsyncSession, session_id: str):
         await SessionRepository.clear_cart(db, session_id)

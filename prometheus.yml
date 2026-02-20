@@ -1,6 +1,4 @@
-# FIX GAP #9: This file was missing entirely.
-# docker-compose mounts ./prometheus.yml but it didn't exist, causing
-# the Prometheus container to crash immediately on startup.
+# docker-compose mounts ./prometheus.yml
 
 global:
   scrape_interval: 15s

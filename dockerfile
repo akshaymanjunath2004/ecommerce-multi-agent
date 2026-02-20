@@ -20,9 +20,6 @@ COPY pyproject.toml uv.lock ./
 # Install base dependencies
 RUN uv sync --no-install-project
 
-# --- THE ABSOLUTE PILL 💊 ---
-# We force every single related package into the 0.2.x world.
-# This prevents the 'langchain.verbose' AttributeError.
 RUN uv pip install --system \
     "langgraph==0.2.20" \
     "langchain-core>=0.2.39,<0.3.0" \

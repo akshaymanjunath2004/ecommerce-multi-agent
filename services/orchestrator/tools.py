@@ -1,5 +1,5 @@
 """
-FIX GAP #11: Removed the redundant DELETE /{session_id}/items call at the
+Removed the redundant DELETE /{session_id}/items call at the
 end of checkout(). The saga's lock_cart_item step already atomically deletes
 each item before processing it. The bulk-clear at the end was:
   1. A no-op (cart is already empty by then)
@@ -135,12 +135,6 @@ class ECommerceTools:
                             f"Error processing Product {ctx['pid']}: "
                             f"Transaction aborted and rolled back."
                         )
-
-                # FIX GAP #11: REMOVED the redundant bulk cart clear that was here.
-                # The saga's lock_cart_item step already atomically deletes each item
-                # before processing it. The cart is empty by the time we reach here.
-                # Calling DELETE /{session_id}/items would be a no-op at best and
-                # could return a misleading 404 if the session was cleaned up.
 
             if not results:
                 return "Cart is empty (or all items were already processed)."

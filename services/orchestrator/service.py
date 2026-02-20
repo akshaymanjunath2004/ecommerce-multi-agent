@@ -9,7 +9,7 @@ class ChatService:
         # Config contains the session_id for memory (LangGraph Checkpointer)
         config = {"configurable": {"thread_id": session_id}}
         
-        # FIX: We inject the session_id explicitly so the LLM knows it.
+        # We inject the session_id explicitly so the LLM knows it.
         # This prevents it from hallucinating "session_id" as the ID.
         system_instruction = f"You are a shopping assistant. Your current session_id is '{session_id}'. You MUST use this ID for all tool calls."
         

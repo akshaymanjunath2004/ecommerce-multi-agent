@@ -1,7 +1,3 @@
-# FIX GAP #13: Auto-provisions Prometheus as the default Grafana datasource.
-# Without this file, Grafana starts completely empty and engineers must
-# manually add the datasource every time the container is recreated.
-
 apiVersion: 1
 
 datasources:

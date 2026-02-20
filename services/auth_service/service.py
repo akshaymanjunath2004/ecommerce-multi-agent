@@ -1,8 +1,3 @@
-"""
-FIX GAP #2: Replaced fake_user_db in-memory dict with real async DB calls.
-FIX GAP #10: All methods are now async — no longer blocking the event loop
-             on what were previously synchronous classmethods.
-"""
 from fastapi import HTTPException, status
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,9 +21,6 @@ class AuthService:
     def _verify_password(plain: str, hashed: str) -> bool:
         return _pwd_context.verify(plain, hashed)
 
-    # FIX GAP #10: async — was sync classmethod; bcrypt hash is CPU-bound but
-    # passlib is fast enough for typical loads. For extreme throughput, wrap in
-    # asyncio.to_thread(). Kept simple here for clarity.
     @staticmethod
     async def register(db: AsyncSession, data: UserCreate) -> User:
         existing = await UserRepository.get_by_email(db, data.email)

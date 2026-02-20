@@ -1,11 +1,3 @@
-"""
-FIX GAP #12: Previously raised ValueError at module import time if
-INTERNAL_API_KEY was not set. This crashed the entire application on startup
-(and during any local testing without a .env file).
-
-Now uses a safe default with a loud WARNING log so development still works
-but production misconfiguration is clearly surfaced — not silently accepted.
-"""
 import os
 import secrets
 import warnings

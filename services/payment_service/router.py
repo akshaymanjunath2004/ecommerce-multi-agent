@@ -1,5 +1,5 @@
 """
-FIX GAP #5: Payment endpoints now require X-Internal-API-Key.
+Payment endpoints now require X-Internal-API-Key.
 Previously anyone could POST /payment/ and generate arbitrary payment
 records in the database without going through checkout.
 """
@@ -12,7 +12,6 @@ from shared.security.dependencies import verify_internal_api_key
 from .schemas import PaymentCreate, PaymentResponse
 from .service import PaymentService
 
-# FIX GAP #5: Router-level dependency protects all payment endpoints
 router = APIRouter(dependencies=[Depends(verify_internal_api_key)])
 public_router = APIRouter()  # For any public endpoints (e.g. health check)
 

@@ -21,5 +21,5 @@ def user_id_or_ip(request: Request) -> str:
     # Fallback to IP address (handles proxies if X-Forwarded-For is set correctly by Uvicorn)
     return f"ip:{get_remote_address(request)}"
 
-# Initialize the Limiter with our custom key function
+# Initialize the Limiter with the custom key function
 limiter = Limiter(key_func=user_id_or_ip)

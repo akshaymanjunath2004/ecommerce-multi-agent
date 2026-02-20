@@ -10,7 +10,6 @@ x-security-env: &security-env
   JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set}
 
 x-observability-env: &observability-env
-  # FIX GAP #6: Consistent env var name used by both setup.py and docker-compose
   OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
   LOG_LEVEL: ${LOG_LEVEL:-INFO}
 
@@ -41,7 +40,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # FIX GAP #1: Moved from inside volumes: block into services: block
   jaeger:
     image: jaegertracing/all-in-one:1.58
     container_name: ecommerce_jaeger
@@ -53,7 +51,6 @@ services:
       COLLECTOR_OTLP_ENABLED: "true"
     restart: unless-stopped
 
-  # FIX GAP #1 + GAP #9: Moved from inside volumes: block; prometheus.yml now exists
   prometheus:
     image: prom/prometheus:v2.53.0
     container_name: ecommerce_prometheus
@@ -67,7 +64,6 @@ services:
       - --storage.tsdb.retention.time=7d
     restart: unless-stopped
 
-  # FIX GAP #1 + GAP #13: Moved from volumes; grafana provisioning now auto-configures Prometheus
   grafana:
     image: grafana/grafana:11.1.0
     container_name: ecommerce_grafana
@@ -86,7 +82,6 @@ services:
 
   # ── Microservices ───────────────────────────────────────────────────────────
 
-  # FIX GAP #1: auth_service was inside volumes: block — moved here
   auth_service:
     <<: *common-service
     container_name: auth_service
