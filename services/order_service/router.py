@@ -6,9 +6,11 @@ from .schemas import OrderCreate, OrderResponse
 from .service import OrderService
 
 # THIS PROTECTS THE ENTIRE SERVICE
+
+public_router = APIRouter()  # For any public endpoints (e.g. health check)
 router = APIRouter(dependencies=[Depends(verify_internal_api_key)])
 
-@router.get("/health")
+@public_router.get("/health")
 async def health_check():
     return {"service": "order", "status": "running"}
 

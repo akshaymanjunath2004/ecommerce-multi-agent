@@ -1,11 +1,22 @@
+"""
+FIX GAP #8: Added setup_observability() call.
+Previously session_service produced no structured logs, traces, or metrics.
+Every cart operation was invisible to the observability stack.
+"""
 from fastapi import FastAPI
 from sqlalchemy import text
-from shared.config.database import engine, Base
-from .router import router
-from .models import Session # Important: Import models so Alembic/SQLAlchemy sees them
 
-session_app = FastAPI(title="Session Service", version="1.0.0")
+from shared.config.database import Base, engine
+from shared.observability.setup import setup_observability  # FIX GAP #8
 
+from .models import Session, SessionItem  # noqa: F401
+from .router import router, public_router
+
+session_app = FastAPI(title="Session Service", version="2.0.0")
+
+# FIX GAP #8: Now emits structured logs, OTLP traces to Jaeger, and /metrics
+setup_observability(session_app, "session_service")
+session_app.include_router(public_router)
 session_app.include_router(router)
 
 @session_app.on_event("startup")

@@ -1,0 +1,15 @@
+# FIX GAP #13: Enables auto-loading of dashboard JSON files placed in this
+# directory. Add any .json dashboard export file here and it will appear
+# in Grafana automatically on next container start.
+
+apiVersion: 1
+
+providers:
+  - name: default
+    orgId: 1
+    folder: 'E-Commerce'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/provisioning/dashboards

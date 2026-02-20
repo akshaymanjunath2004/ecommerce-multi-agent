@@ -1,7 +1,29 @@
 version: "3.9"
 
+# ── Shared env anchors ────────────────────────────────────────────────────────
+x-db-env: &db-env
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: 5432
+
+x-security-env: &security-env
+  INTERNAL_API_KEY: ${INTERNAL_API_KEY:?INTERNAL_API_KEY must be set}
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set}
+
+x-observability-env: &observability-env
+  # FIX GAP #6: Consistent env var name used by both setup.py and docker-compose
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+x-common-service: &common-service
+  build: .
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+
 services:
-  # --- Infrastructure ---
+
+  # ── Infrastructure ──────────────────────────────────────────────────────────
   postgres:
     image: postgres:15
     container_name: ecommerce_postgres
@@ -10,7 +32,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ecommerce
     ports:
-      - "5433:5432" # Host 5433 -> Container 5432
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -19,130 +41,113 @@ services:
       timeout: 5s
       retries: 5
 
-  # --- Microservices ---
-  
-  # 1. Orchestrator (Port 8000)
+  # FIX GAP #1: Moved from inside volumes: block into services: block
+  jaeger:
+    image: jaegertracing/all-in-one:1.58
+    container_name: ecommerce_jaeger
+    ports:
+      - "16686:16686"   # Jaeger UI  →  http://localhost:16686
+      - "4317:4317"     # OTLP gRPC  (receives traces from all services)
+      - "4318:4318"     # OTLP HTTP
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    restart: unless-stopped
+
+  # FIX GAP #1 + GAP #9: Moved from inside volumes: block; prometheus.yml now exists
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: ecommerce_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+    restart: unless-stopped
+
+  # FIX GAP #1 + GAP #13: Moved from volumes; grafana provisioning now auto-configures Prometheus
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: ecommerce_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # ── Microservices ───────────────────────────────────────────────────────────
+
+  # FIX GAP #1: auth_service was inside volumes: block — moved here
+  auth_service:
+    <<: *common-service
+    container_name: auth_service
+    command: uvicorn services.auth_service.main:auth_app --host 0.0.0.0 --port 8000
+    ports:
+      - "8005:8000"
+    environment:
+      <<: [*db-env, *security-env, *observability-env]
+
   orchestrator:
-    build: .
+    <<: *common-service
     container_name: orchestrator
     command: uvicorn services.orchestrator.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY} # Reads from your .env file
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      # Service Discovery URLs (Internal Docker Network)
-      - PRODUCT_URL=http://product_service:8000
-      - ORDER_URL=http://order_service:8000
-      - PAYMENT_URL=http://payment_service:8000
-      - SESSION_URL=http://session_service:8000
-    depends_on:
-      postgres:
-        condition: service_healthy
+      <<: [*db-env, *security-env, *observability-env]
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY must be set}
+      PRODUCT_URL: http://product_service:8000
+      ORDER_URL: http://order_service:8000
+      PAYMENT_URL: http://payment_service:8000
+      SESSION_URL: http://session_service:8000
+      RATE_LIMIT_CHAT: ${RATE_LIMIT_CHAT:-10/minute}
 
-  # 2. Product Service (Port 8001)
   product_service:
-    build: .
+    <<: *common-service
     container_name: product_service
     command: uvicorn services.product_service.main:product_app --host 0.0.0.0 --port 8000
     ports:
-      - "8001:8000" # Map Host 8001 to Internal 8000
+      - "8001:8000"
     environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-    depends_on:
-      postgres:
-        condition: service_healthy
+      <<: [*db-env, *security-env, *observability-env]
 
-  # 3. Order Service (Port 8002)
   order_service:
-    build: .
+    <<: *common-service
     container_name: order_service
     command: uvicorn services.order_service.main:order_app --host 0.0.0.0 --port 8000
     ports:
       - "8002:8000"
     environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-    depends_on:
-      postgres:
-        condition: service_healthy
+      <<: [*db-env, *security-env, *observability-env]
 
-  # 4. Payment Service (Port 8003)
   payment_service:
-    build: .
+    <<: *common-service
     container_name: payment_service
     command: uvicorn services.payment_service.main:payment_app --host 0.0.0.0 --port 8000
     ports:
       - "8003:8000"
     environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-    depends_on:
-      postgres:
-        condition: service_healthy
+      <<: [*db-env, *security-env, *observability-env]
 
-  # 5. Session Service (Port 8004)
   session_service:
-    build: .
+    <<: *common-service
     container_name: session_service
     command: uvicorn services.session_service.main:session_app --host 0.0.0.0 --port 8000
     ports:
       - "8004:8000"
     environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-    depends_on:
-      postgres:
-        condition: service_healthy
+      <<: [*db-env, *security-env, *observability-env]
 
 volumes:
   postgres_data:
-
-  # 6. Auth Service (Port 8005)
-  auth_service:
-    build: .
-    container_name: auth_service
-    command: uvicorn services.auth_service.main:app --host 0.0.0.0 --port 8000
-    ports:
-      - "8005:8000"
-    environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  # --- OBSERVABILITY STACK ---
-  
-  # Jaeger (Distributed Tracing UI)
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    container_name: jaeger
-    ports:
-      - "16686:16686" # Web UI
-      - "4317:4317"   # OTLP gRPC receiver
-      - "4318:4318"   # OTLP HTTP receiver
-
-  # Prometheus (Metrics Database)
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      # You'll need a prometheus.yml file pointing to your service containers:8000/metrics
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml 
-
-  # Grafana (Metrics Dashboards)
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    depends_on:
-      - prometheus
+  prometheus_data:
+  grafana_data:

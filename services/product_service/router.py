@@ -8,8 +8,9 @@ from .schemas import ProductCreate, ProductResponse, StockUpdate
 from .service import ProductService
 
 router = APIRouter(dependencies=[Depends(verify_internal_api_key)])
+public_router = APIRouter()  # For any public endpoints (e.g. health check)
 
-@router.get("/health")
+@public_router.get("/health")
 async def health_check():
     return {"service": "product", "status": "running"}
 
