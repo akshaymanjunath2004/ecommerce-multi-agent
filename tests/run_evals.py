@@ -1,3 +1,4 @@
+import os
 import httpx
 import json
 import asyncio
@@ -9,6 +10,11 @@ from termcolor import colored
 AGENT_URL = "http://localhost:8000/chat"
 PRODUCT_URL = "http://localhost:8001"
 SESSION_URL = "http://localhost:8004"
+AUTH_URL = "http://localhost:8005/auth"
+
+# Security Headers for the test suite
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "internal-cluster-key-change-me")
+HEADERS = {"X-Internal-API-Key": INTERNAL_API_KEY}
 
 judge_llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
@@ -32,9 +38,23 @@ Format: STATUS | Reason
 Example: PASS | The agent successfully returned an order ID.
 """)
 
+async def get_test_token():
+    """Registers a test user and returns a valid JWT."""
+    async with httpx.AsyncClient() as client:
+        # Try to register
+        try:
+            await client.post(f"{AUTH_URL}/register", json={"email": "test@evals.com", "password": "password123"})
+        except:
+            pass # User might already exist
+            
+        # Login to get the JWT
+        resp = await client.post(f"{AUTH_URL}/login", json={"email": "test@evals.com", "password": "password123"})
+        resp.raise_for_status()
+        return resp.json()["access_token"]
+
 async def setup_environment():
     print(colored("⚙️  Resetting Environment...", "cyan"))
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(headers=HEADERS) as client:
         try:
             await client.post(f"{PRODUCT_URL}/reset_db")
         except:
@@ -56,22 +76,26 @@ async def setup_environment():
         
         print("   ✅ Environment Restocked with 6 products.")
 
-async def run_test_case(test_case):
+async def run_test_case(test_case, jwt_token):
     name = test_case["name"]
     user_input = test_case["inputs"]
     expected = test_case["expected_behavior"]
 
     print(f"\n🧪 Testing: {colored(name, 'yellow')}")
 
+    # The Orchestrator requires a valid JWT now!
+    auth_headers = {"Authorization": f"Bearer {jwt_token}"}
+
     async with httpx.AsyncClient(timeout=30.0) as client:
-        session_resp = await client.post(f"{SESSION_URL}/", json={"user_id": 1})
+        session_resp = await client.post(f"{SESSION_URL}/", json={"user_id": 1}, headers=HEADERS)
         session_id = session_resp.json()["session_id"]
 
         try:
             print(f"   User: {user_input}")
             response = await client.post(
                 AGENT_URL, 
-                json={"session_id": session_id, "message": user_input}
+                json={"session_id": session_id, "message": user_input},
+                headers=auth_headers
             )
             response.raise_for_status()
             agent_reply = response.json()["response"]
@@ -100,9 +124,10 @@ async def main():
         dataset = json.load(f)
 
     await setup_environment()
+    jwt_token = await get_test_token()
     
     for test in dataset:
-        await run_test_case(test)
+        await run_test_case(test, jwt_token)
 
 if __name__ == "__main__":
     asyncio.run(main())

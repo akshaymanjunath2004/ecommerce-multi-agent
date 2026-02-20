@@ -99,3 +99,50 @@ services:
 
 volumes:
   postgres_data:
+
+  # 6. Auth Service (Port 8005)
+  auth_service:
+    build: .
+    container_name: auth_service
+    command: uvicorn services.auth_service.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8005:8000"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # --- OBSERVABILITY STACK ---
+  
+  # Jaeger (Distributed Tracing UI)
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686" # Web UI
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+
+  # Prometheus (Metrics Database)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      # You'll need a prometheus.yml file pointing to your service containers:8000/metrics
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml 
+
+  # Grafana (Metrics Dashboards)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus

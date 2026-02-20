@@ -1,4 +1,5 @@
 import logging
+from shared.observability import ecomm_saga_compensation_total
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ class SagaOrchestrator:
                 try:
                     await step.compensation(ctx)
                     logger.info(f"Rollback successful for step '{step.name}'")
+                    ecomm_saga_compensation_total.labels(step_name=step.name).inc()
                 except Exception as ce:
                     # A failing compensation MUST NOT block other compensations
                     logger.critical(f"CRITICAL: Compensation failed for '{step.name}'. Manual intervention may be required. Error: {ce}")

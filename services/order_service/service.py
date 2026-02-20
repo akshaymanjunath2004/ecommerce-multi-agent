@@ -21,3 +21,7 @@ class OrderService:
     @staticmethod
     async def get_order(db: AsyncSession, order_id: int):
         return await OrderRepository.get_order(db, order_id)
+    
+    @staticmethod
+    async def cancel_order(db: AsyncSession, order_id: int):
+        return await OrderRepository.cancel_order(db, order_id)

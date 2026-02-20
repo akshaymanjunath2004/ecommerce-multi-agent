@@ -14,3 +14,17 @@ class OrderRepository:
     async def get_order(db: AsyncSession, order_id: int):
         result = await db.execute(select(Order).where(Order.id == order_id))
         return result.scalars().first()
+    
+    @staticmethod
+    async def cancel_order(db: AsyncSession, order_id: int):
+        result = await db.execute(select(Order).where(Order.id == order_id))
+        order = result.scalars().first()
+        
+        if not order:
+            return None
+            
+        order.status = "cancelled"
+        
+        await db.commit()
+        await db.refresh(order)
+        return order

@@ -1,6 +1,7 @@
 import os
 import httpx
 import asyncio
+from .checkout_saga import build_checkout_saga
 from langchain_core.tools import tool
 
 # Env Vars
@@ -108,47 +109,28 @@ class ECommerceTools:
                 if not items:
                     return "Cart is empty."
 
-                # 2. Process Items
+                # 2. Process Items USING THE SAGA
                 for item in items:
-                    pid = int(item["product_id"])
-                    qty = int(item["quantity"])
-
-                    product_resp = await client.get(f"{PRODUCT_URL}/{pid}")
-                    if product_resp.status_code != 200:
-                        continue
-
-                    product = product_resp.json()
-                    product_name = product.get("name", "Unknown Product") 
-                    real_price = product["price"]
-
-                    stock_payload = {"quantity": qty}
-                    stock_resp = await client.post(f"{PRODUCT_URL}/{pid}/reduce_stock", json=stock_payload)
-                    if stock_resp.status_code != 200:
-                        continue
-
-                    order_payload = {
-                        "product_id": pid,
-                        "quantity": qty,
-                        "unit_price": real_price
+                    ctx = {
+                        "client": client,
+                        "session_id": session_id,
+                        "pid": int(item["product_id"]),
+                        "qty": int(item["quantity"])
                     }
-                    order_resp = await client.post(f"{ORDER_URL}/", json=order_payload)
-                    order_resp.raise_for_status()
-                    order = order_resp.json()
-                    order_id = order["id"]
-
-                    pay_payload = {
-                        "order_id": order_id,
-                        "amount": order["total_price"]
-                    }
-                    payment_resp = await client.post(f"{PAYMENT_URL}/", json=pay_payload)
-                    payment_resp.raise_for_status()
-                    payment = payment_resp.json()
-                    tx_id = payment.get("transaction_id")
-                    total_price = order["total_price"]
-
-                    results.append(
-                        f"Success! Ordered {product_name}. Order ID: {order_id} | Transaction ID: {tx_id} | Total Paid: ${total_price}"
-                    )
+                    
+                    saga = build_checkout_saga()
+                    
+                    try:
+                        await saga.execute(ctx)
+                        results.append(
+                            f"Success! Ordered {ctx['product_name']}. "
+                            f"Order ID: {ctx['order_id']} | "
+                            f"Transaction ID: {ctx['transaction_id']} | "
+                            f"Total Paid: ${ctx['total_price']}"
+                        )
+                    except Exception as e:
+                        # If saga rolls back, continue to next item
+                        results.append(f"Error processing Product {ctx['pid']}: Transaction aborted and rolled back.")
                 
                 # 3. CLEAR CART 
                 del_resp = await client.delete(f"{SESSION_URL}/{session_id}/items")
