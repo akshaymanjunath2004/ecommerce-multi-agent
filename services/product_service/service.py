@@ -36,3 +36,7 @@ class ProductService:
     @staticmethod
     async def get_product_by_id(db: AsyncSession, product_id: int):
         return await ProductRepository.get_product_by_id(db, product_id)
+    
+    @staticmethod
+    async def restore_stock(db: AsyncSession, product_id: int, quantity: int):
+        return await ProductRepository.restore_stock(db, product_id, quantity)

@@ -3,10 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from services.product_service.repository import ProductRepository
 from shared.config.database import get_db
+from shared.security.dependencies import verify_internal_api_key
 from .schemas import ProductCreate, ProductResponse, StockUpdate
 from .service import ProductService
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_internal_api_key)])
 
 @router.get("/health")
 async def health_check():
@@ -69,3 +70,10 @@ async def get_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return product
+
+@router.post("/{product_id}/restore_stock")
+async def restore_stock(product_id: int, payload: StockUpdate, db: AsyncSession = Depends(get_db)):
+    success = await ProductService.restore_stock(db, product_id, payload.quantity)
+    if not success:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"message": "Stock restored"}

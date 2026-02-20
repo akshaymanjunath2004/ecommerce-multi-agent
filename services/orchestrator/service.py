@@ -20,7 +20,7 @@ class ChatService:
             ]
         }
         
-        result = self.agent.invoke(inputs, config=config)
+        result = await self.agent.ainvoke(inputs, config=config)
         
         # Return the last message from the AI
         return result["messages"][-1].content

@@ -27,3 +27,16 @@ class ProductRepository:
         await db.commit()
         await db.refresh(product)
         return product
+    
+    @staticmethod
+    async def restore_stock(db: AsyncSession, product_id: int, quantity: int):
+        result = await db.execute(select(Product).where(Product.id == product_id))
+        product = result.scalars().first()
+        
+        if not product:
+            return None
+            
+        product.stock += quantity
+        await db.commit()
+        await db.refresh(product)
+        return product
